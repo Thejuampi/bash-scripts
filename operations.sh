@@ -1,6 +1,6 @@
 #!/bin/bash
 
-check_jar_conflicts_sequencia_cached_only_jar_names() {
+check_jar_conflicts_sequencial_cached_only_jar_names() {
   local directory="$1"
   local regex_filter="$2"
 
