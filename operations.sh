@@ -7,7 +7,7 @@ check_jar_conflicts_sequencial_cached_only_jar_names() {
   declare -A class_cache=()
 
   while IFS= read -r -d '' jar_file; do
-    class_cache["$jar_file"]=$(jar -tf "$jar_file" | grep '\.class$' | sed 's/\.class$//' | tr '/' '.' | grep -E "$regex_filter" || true)
+    class_cache["$jar_file"]=$(jar -tf "$jar_file" | grep -E '\.class$' | grep -vE '^(module-info|META-INF/versions/).*\.class$' | sed 's/\.class$//' | tr '/' '.' | grep -E "$regex_filter" || true)
   done < <(find "$directory" -name "*.jar" -print0)
 
   local conflict_found=false
