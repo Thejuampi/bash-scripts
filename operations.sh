@@ -53,7 +53,10 @@ check_jar_conflicts_sequencial_cached() {
         if [ ! -z "$common_classes" ]; then
           conflict_found=true
           echo "Class conflicts found between $jar_file1 and $jar_file2:"
-          echo "$common_classes"
+          head -n 3 <<< "$common_classes"
+          if [ $(wc -l <<< "$common_classes") -gt 3 ]; then
+            echo "and $(($(wc -l <<< "$common_classes") - 3)) more."
+          fi
         fi
       fi
     done
