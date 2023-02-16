@@ -12,6 +12,8 @@ def check_jar_conflicts(jar_path, max_conflicts=3):
             for class_file in z.namelist():
                 if not class_file.endswith('.class'):
                     continue
+                if class_file.startswith('META-INF/versions/') or class_file == 'module-info.class':
+                    continue
                 class_name = os.path.basename(class_file)[:-6]
                 if class_name in class_map:
                     print(f"Duplicate class file found: {class_file}")
