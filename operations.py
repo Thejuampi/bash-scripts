@@ -16,9 +16,10 @@ def check_jar_conflicts(jar_path, max_conflicts=3):
                     continue
                 class_name = os.path.basename(class_file)[:-6]
                 if class_name in class_map:
-                    print(f"Duplicate class file found: {class_file}")
+                    if jar_file != class_map[class_name]:
+                        print(f"Class {class_name} in JAR {jar_file} conflicts with class in JAR {class_map[class_name]}")
                     continue
-                class_map[class_name] = os.path.basename(jar_file)
+                class_map[class_name] = jar_file
 
     # Check for conflicts between class files
     for class_name, jar_name in class_map.items():
