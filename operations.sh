@@ -6,39 +6,33 @@ check_jar_conflicts() {
     local jar_files=("$1"/*.jar)
     local max_conflicts=${2:-3}
 
-    # Extract the list of class files from all JAR files
-    local class_list=()
-    for jar_file in "${jar_files[@]}"; do
-        class_list+=($(unzip -Z -1 "$jar_file" '*.class'))
-    done
-
-    # Sort the class files by name
-    IFS=$'\n' class_files=($(sort -z <<<"${class_list[*]}"))
-    unset IFS
-
-    # Iterate over each class file
-    for class_file in "${class_files[@]}"; do
+    # Extract the list of class files and their contents from all JAR files
+    declare -A class_map
+    while IFS= read -r -d '' class_file; do
         local jar_file=$(find "${jar_files[@]}" -type f -name "$(basename "$class_file")" | head -n 1)
         local jar_name=$(basename "$jar_file")
         local class_name=$(echo "$class_file" | sed 's/.*\///;s/\.class$//')
 
-        # Check if this class has already been processed
-        if [[ ${class_cache[$class_name]} ]]; then
+        if [[ -n ${class_map[$class_name]} ]]; then
+            echo "Duplicate class file found: $class_file"
             continue
         fi
 
-        # Check if this class conflicts with a class from another JAR file
-        for other_class_file in "${class_cache[@]}"; do
-            local other_jar_name=${class_cache[$class_name]}
-            local other_jar_file="$1/$other_jar_name.jar"
-            if cmp -s <(unzip -p "$jar_file" "$class_file") <(unzip -p "$other_jar_file" "$other_class_file"); then
+        class_map[$class_name]=$jar_name$'\n'$(unzip -p "$jar_file" "$class_file" | md5sum | cut -d ' ' -f 1)
+    done < <(unzip -Z -1 "${jar_files[@]}" '*.class' | tr '\n' '\0')
+
+    # Check for conflicts between class files
+    for class_name in "${!class_map[@]}"; do
+        local jar_name=${class_map[$class_name]%%$'\n'*}
+        local md5=${class_map[$class_name]#*$'\n'}
+        for other_class_name in "${!class_cache[@]}"; do
+            local other_jar_name=${class_cache[$other_class_name]%%$'\n'*}
+            local other_md5=${class_cache[$other_class_name]#*$'\n'}
+            if [[ $class_name != $other_class_name && $jar_name != $other_jar_name && $md5 == $other_md5 ]]; then
                 echo "Class $class_name in JAR $jar_name conflicts with class in JAR $other_jar_name"
-                break
             fi
         done
-
-        # Add the class file to the list of processed classes
-        class_cache[$class_name]=$jar_name
+        class_cache[$class_name]=$jar_name$'\n'$md5
     done
 }
 
