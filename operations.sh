@@ -1,5 +1,45 @@
 #!/bin/bash
 
+
+check_jar_conflicts() {
+    local class_cache=()
+    local jar_files=("$1"/*.jar)
+    local max_conflicts=${2:-3}
+
+    # Sort the class files by name
+    local class_files=($(find "$1" -name '*.class' -print0 | sort -z))
+
+    # Iterate over each JAR file in the directory
+    for jar_file in "${jar_files[@]}"; do
+        local jar_name=$(basename "$jar_file")
+        local classes=()
+
+        # Iterate over each class file in the JAR file
+        while IFS= read -r -d '' class_file; do
+            local class_name=$(unzip -p "$jar_file" "$class_file" | head -n 1 | sed 's/.* class \([a-zA-Z0-9$_]*\).*/\1/')
+            
+            # Check if this class has already been processed
+            if [[ ${class_cache[$class_name]} == "$jar_name" ]]; then
+                continue
+            fi
+            
+            # Check if this class conflicts with a class from another JAR file
+            for other_class_file in "${classes[@]}"; do
+                local other_jar_name=${class_cache[$class_name]}
+                local other_jar_file="$1/$other_jar_name.jar"
+                if cmp -s <(unzip -p "$jar_file" "$class_file") <(unzip -p "$other_jar_file" "$other_class_file"); then
+                    echo "Class $class_name in JAR $jar_name conflicts with class in JAR $other_jar_name"
+                    break
+                fi
+            done
+            
+            # Add the class file to the list of processed classes
+            class_cache[$class_name]=$jar_name
+            classes+=("$class_file")
+        done < <(unzip -Z -1 "$jar_file" '*.class' 2>/dev/null | tr '\n' '\0')
+    done
+}
+
 check_jar_conflicts_sequencial_cached_only_jar_names() {
   local directory="$1"
   local regex_filter="$2"
