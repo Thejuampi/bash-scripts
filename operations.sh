@@ -1,5 +1,26 @@
 #!/bin/bash
 
+function generate_state_diagram() {
+    # Read the YAML file
+    yaml=$(cat $1)
+
+    # Parse the YAML file
+    echo "@startuml"
+    echo "[*]"
+    while read -r state; do
+        name=$(echo $state | grep -oP "(?<=name: ).*")
+        echo "\"$name\" {"
+        transitions=$(echo $state | grep -oP "(?<=transitions: ).*")
+        while read -r transition; do
+            event=$(echo $transition | grep -oP ".*?(?= :)")
+            dest=$(echo $transition | grep -oP "(?<=: ).*")
+            echo "  \"$name\" -> \"$dest\" : $event"
+        done <<< "$transitions"
+        echo "}"
+    done <<< "$(echo $yaml | grep -oP "(?<=-).*?(?=- name:|$)")"
+    echo "[*]"
+    echo "@enduml"
+}
 
 
 check_jar_conflicts() {
