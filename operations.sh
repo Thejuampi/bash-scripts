@@ -12,15 +12,18 @@ function generate_state_diagram() {
         echo "\"$name\" {"
         transitions=$(echo $state | grep -oP "(?<=transitions: ).*")
         while read -r transition; do
-            event=$(echo $transition | grep -oP ".*?(?= :)")
-            dest=$(echo $transition | grep -oP "(?<=: ).*")
-            echo "  \"$name\" -> \"$dest\" : $event"
+            if [[ $transition =~ (.+):\s*(.+) ]]; then
+                event="${BASH_REMATCH[1]}"
+                dest="${BASH_REMATCH[2]}"
+                echo "  \"$name\" -> \"$dest\" : $event"
+            fi
         done <<< "$transitions"
         echo "}"
-    done <<< "$(echo $yaml | grep -oP "(?<=-).*?(?=- name:|$)")"
+    done <<< "$(echo "$yaml" | grep -oP "(?<=-).*?(?=- name:|$)")"
     echo "[*]"
     echo "@enduml"
 }
+
 
 
 check_jar_conflicts() {
